@@ -102,7 +102,7 @@ height="100%">
                     <ColumnListItem vAlign="Middle">
                         <cells>
                             <Text text="{attribute}" />
-                            <Input value="{path: 'value', formatter: '.formatter.getSecuencia'}" enabled="false" />
+                            <Text text="{path: 'value', formatter: '.formatter.getSecuencia'}"  />
                             <Input value="{path: 'value', formatter: '.formatter.getMaterial'}" enabled="false" />
                             <Input value="{path: 'value', formatter: '.formatter.getLote'}" enabled="false" />
                             <ObjectAttribute text="{loteQty} {loteUom}" />

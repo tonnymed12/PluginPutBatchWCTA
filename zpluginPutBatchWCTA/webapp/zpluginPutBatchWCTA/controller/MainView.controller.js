@@ -298,13 +298,8 @@ sap.ui.define([
             // Resetear secuencia cuando se limpian los datos
             this.iSecuenciaCounter = 0;
 
-            //se prepara los datos para hacer el update 
-            const slotTipo = oView.byId("slotType").getValue();
-            const slotQty = oView.byId("slotQty").getValue();
-
+            //se prepara los datos para hacer el update (SLOTTIPO/SLOTQTY se preservan por el merge)
             const aEdited = [
-                { attribute: "SLOTTIPO", value: slotTipo },
-                { attribute: "SLOTQTY", value: slotQty },
                 ...aItems.map(slot => ({ attribute: slot.attribute, value: slot.value }))
             ]
 
@@ -681,13 +676,8 @@ sap.ui.define([
                 oInput.setValue("");
                 oInput.focus();
 
-                const slotTipo = oView.byId("slotType").getValue();
-                const slotQty = oView.byId("slotQty").getValue();
-
-                // Construir editados sobre datos frescos
+                // Construir editados sobre datos frescos (SLOTTIPO/SLOTQTY se preservan por el merge)
                 const aEdited = [
-                    { attribute: "SLOTTIPO", value: slotTipo },
-                    { attribute: "SLOTQTY", value: slotQty },
                     ...aItems.map(function (slot) { return { attribute: slot.attribute, value: slot.value }; })
                 ];
 
@@ -825,13 +815,8 @@ sap.ui.define([
 
                 sap.m.MessageToast.show(oBundle.getText("loteEliminado"));
 
-                var slotTipo = oView.byId("slotType").getValue();
-                var slotQty = oView.byId("slotQty").getValue();
-
-                var aEdited = [
-                    { attribute: "SLOTTIPO", value: slotTipo },
-                    { attribute: "SLOTQTY", value: slotQty }
-                ].concat(aSlots.map(function (slot) { return { attribute: slot.attribute, value: slot.value }; }));
+                // SLOTTIPO/SLOTQTY se preservan por el merge con customValues frescos
+                var aEdited = aSlots.map(function (slot) { return { attribute: slot.attribute, value: slot.value }; });
 
                 // Merge con customValues frescos (ya obtenidos en el refresh)
                 var aOriginal = oRefresh.customValues;
@@ -991,12 +976,9 @@ sap.ui.define([
                 this._updateOrderSummaryScannedQty(aSlots);
 
                 const oView = this.getView();
-                const slotTipo = oView.byId("slotType").getValue();
-                const slotQty = oView.byId("slotQty").getValue();
 
+                // SLOTTIPO/SLOTQTY se preservan por el merge con customValues frescos
                 const aEdited = [
-                    { attribute: "SLOTTIPO", value: slotTipo },
-                    { attribute: "SLOTQTY", value: slotQty },
                     ...aSlots.map(function (slot) { return { attribute: slot.attribute, value: slot.value }; })
                 ];
 
