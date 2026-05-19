@@ -173,10 +173,6 @@ sap.ui.define([
 
             //comparacion del lote ingresado 
             const sNormalizado = sBarcode.toUpperCase();
-            //busca si es igual a uno de los items 
-            const oExiste = aItems.find(Item => {
-                return (Item.value || "").toString().trim().toUpperCase() === sNormalizado;
-            });
 
             const partsBarcode = sNormalizado.split('!');
 
@@ -187,6 +183,19 @@ sap.ui.define([
             }
             const loteExtraido = partsBarcode[1].trim();
             const materialExtraido = partsBarcode[0].trim();
+
+            // Verificar duplicado comparando solo material!lote (los valores almacenados
+            // incluyen también !SEQ, por lo que la comparación directa nunca coincidiría)
+            const sMaterialLoteEscaneado = materialExtraido + "!" + loteExtraido;
+            const oExiste = aItems.find(function (Item) {
+                var partsItem = (Item.value || "").toString().trim().toUpperCase().split('!');
+                return partsItem.length >= 2 && partsItem.slice(0, 2).join('!') === sMaterialLoteEscaneado;
+            });
+            if (oExiste) {
+                sap.m.MessageToast.show(oBundle.getText("barcodeExists", [sBarcode, oExiste.attribute]));
+                oInput.setValue(""); oInput.focus();
+                return;
+            }
 
             this._validarMaterialYLote(loteExtraido, materialExtraido);
 
@@ -237,6 +246,7 @@ sap.ui.define([
                     this.ajaxPostRequest(urlLote, inParams,
                         function (oRes) {
                             slot.loteQty = this._formatLoteQty(oRes.outCantidadLote);
+                            slot.loteUom = oRes.outOUMLote || "";
                             resolve({ slot: slot, ok: true });
                         }.bind(this),
                         function () {
@@ -459,14 +469,18 @@ sap.ui.define([
 
                             if (bEsValido) {
                                 const sCantidadLote = this._formatLoteQty(oResponseData.outCantidadLote);
+                                const sUom = oResponseData.outOUMLote || "";
                                 // Detectar de dónde vino el escaneo
                                 if (!this._slotContext) {
                                     // Viene del input superior → buscar slot vacío
-                                    this._ejecutarUpdate(sCantidadLote);
+                                    // Pasar el barcode capturado ANTES de la validación async para
+                                    // evitar race condition si el input fue limpiado durante la espera.
+                                    this._ejecutarUpdate(sCantidadLote, sUom, materialEscaneado + "!" + loteEscaneado);
                                 } else {
                                     // Viene del botón por fila → actualizar ese slot
                                     this._slotContext.loteQty = sCantidadLote;
-                                    this._procesarSlotValidado(sCantidadLote);
+                                    this._slotContext.uom = sUom;
+                                    this._procesarSlotValidado(sCantidadLote, sUom);
                                 }
                             } else {
                                 sap.m.MessageToast.show(oBundle.getText("loteNoValido"));
@@ -614,11 +628,14 @@ sap.ui.define([
          * Asigna el barcode escaneado (desde input superior) al primer slot vacío.
          * FLUJO: _refreshSlotsFromBackend() → validar duplicados → asignar slot vacío → merge → POST
          * @param {string} sCantidadLote - Cantidad del lote formateada (ej: "150.00")
+         * @param {string} sUom - Unidad de medida del lote
          */
-        _ejecutarUpdate: function (sCantidadLote) {
+        _ejecutarUpdate: function (sCantidadLote, sUom, sBarcodeIn) {
             const oView = this.getView();
             const oInput = oView.byId("scanInput");
-            const sBarcode = oInput.getValue().trim();
+            // Usar el barcode capturado antes de la validación async (evita race condition
+            // si el input fue limpiado mientras se esperaba la respuesta del servidor).
+            const sBarcode = (sBarcodeIn || oInput.getValue()).trim();
             const oPODParams = this.Commons.getPODParams(this.getOwnerComponent());
             const oBundle = oView.getModel("i18n").getResourceBundle();
 
@@ -663,7 +680,7 @@ sap.ui.define([
                     this.iSecuenciaCounter++;
                     oEmptySlot.value = sBarcode + "!" + this.iSecuenciaCounter;
                     oEmptySlot.loteQty = sCantidadLote || "";
-                    oEmptySlot.loteUom = this.getView().getModel("orderSummary").getProperty("/unidadMedida") || "";
+                    oEmptySlot.loteUom = sUom || this.getView().getModel("orderSummary").getProperty("/unidadMedida") || "";
                     oModel.refresh(true);
                     this._updateOrderSummaryScannedQty(aItems);
                 } else {
@@ -836,11 +853,14 @@ sap.ui.define([
                     }
                 }
 
+                var partsDeleted = sValueToDelete.split('!');
+                var sMaterialLoteDeleted = partsDeleted.slice(0, 2).join('!');
                 var oSapApi = this.getPublicApiRestDataSourceUri();
                 this.setCustomValuesPp({
                     inCustomValues: aCustomValuesFinal,
                     inPlant: oPODParams.PLANT_ID,
-                    inWorkCenter: oPODParams.WORK_CENTER
+                    inWorkCenter: oPODParams.WORK_CENTER,
+                    inMaterialLote: sMaterialLoteDeleted
                 }, oSapApi).then(function () {
                     sap.m.MessageToast.show(oBundle.getText("loteActualizadoAntesEliminar"));
                 }).catch(function () {
@@ -897,7 +917,7 @@ sap.ui.define([
          *        → asignar valor+secuencia → merge con customValues frescos → POST
          * @param {string} sCantidadLote - Cantidad del lote formateada (ej: "150.00")
          */
-        _procesarSlotValidado: function (sCantidadLote) {
+        _procesarSlotValidado: function (sCantidadLote, sUom) {
             if (!this._slotContext) {
                 const oBundle = this.getView().getModel("i18n").getResourceBundle();
                 console.error(oBundle.getText("noContextoSlot"));
@@ -970,7 +990,7 @@ sap.ui.define([
                 this.iSecuenciaCounter++;
                 aSlots[iIndex].value = sBarcode + "!" + this.iSecuenciaCounter;
                 aSlots[iIndex].loteQty = sCantidadLote || "";
-                aSlots[iIndex].loteUom = this.getView().getModel("orderSummary").getProperty("/unidadMedida") || "";
+                aSlots[iIndex].loteUom = sUom || this.getView().getModel("orderSummary").getProperty("/unidadMedida") || "";
                 oModel.setProperty("/ITEMS", aSlots);
                 oModel.refresh(true);
                 this._updateOrderSummaryScannedQty(aSlots);
