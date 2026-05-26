@@ -754,7 +754,7 @@ sap.ui.define([
             this._oScanDebounceTimer = setTimeout(function () {
                 this._oScanDebounceTimer = null;
                 this.onBarcodeSubmit();
-            }.bind(this), 400);
+            }.bind(this), 200);
         },
         /**
          * Elimina un lote de la tabla y recorre los posteriores hacia arriba.
@@ -1055,6 +1055,7 @@ sap.ui.define([
             }
             gOperationPhase = oData;
             this.onGetCustomValues();
+            this.setOrderSummary();
 
         },
 
