@@ -378,10 +378,10 @@ sap.ui.define([
 
             // Validación de estatus de operación (en tiempo real desde POD)
             const sCurrentStatus = this._getCurrentOperationStatus();
-            if (sCurrentStatus !== OPERATION_STATUS.ACTIVE) {
-                sap.m.MessageBox.error(oBundle.getText("verificarStatusOperacion"))
-                return;
-            }
+            // if (sCurrentStatus !== OPERATION_STATUS.ACTIVE) {
+            //     sap.m.MessageBox.error(oBundle.getText("verificarStatusOperacion"))
+            //     return;
+            // }
 
             // validación de actividad (siempre refrescar en puestos críticos)
             if (bEsPuestoCritico && bAcActivityValidado !== true) {
@@ -398,10 +398,10 @@ sap.ui.define([
 
                     this.sAcActivity = sAcActivityRefrescado;
 
-                    if (sAcActivityRefrescado !== "SETUP") {
-                        sap.m.MessageBox.error(oBundle.getText("acActivityNotSetup"));
-                        return;
-                    }
+                    // if (sAcActivityRefrescado !== "SETUP") {
+                    //     sap.m.MessageBox.error(oBundle.getText("acActivityNotSetup"));
+                    //     return;
+                    // }
 
                     this._validarMaterialYLote(loteEscaneado, materialEscaneado, true);
                 }.bind(this));
